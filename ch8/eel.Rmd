@@ -1,0 +1,146 @@
+---
+title: "Logistic Regression - eel case"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Prepare Data
+
+```{r}
+# setwd('~/Documents/Tutorials/Statistics/Discovering-Statistics-Using-R/ch8')
+
+eelData <- read.delim("data/eel.dat", header=TRUE)
+head(eelData)
+```
+
+Reset levels of categorical data
+
+```{r}
+# relevel the categorical data
+eelData$Cured <- relevel(eelData$Cured, "Not Cured") # make "Not Cured" the baseline reperesented by 0
+eelData$Intervention <- relevel(eelData$Intervention, "No Treatment")
+```
+
+# Basic Model: one predictor
+
+```{r}
+# basic model with one predictor
+# Logistic regression is based on a binomial distribution,
+# so set family = binomial()
+eelModel_1 <- glm(Cured ~ Intervention, data = eelData, family = binomial())
+summary(eelModel_1)
+```
+
+
+## Test if the model_1 is better than the baseline model which includes only the constant, no predictor
+
+```{r}
+# chi square = base line deviance - new deviance
+modelChi <- eelModel_1$null.deviance - eelModel_1$deviance
+modelChi
+
+# degree of freedom of the chi distribution = df of baseline deviance - df of new deviance
+chidf <- eelModel_1$df.null - eelModel_1$df.residual
+chidf
+
+# Probability associated with this chi-square statistic
+chisq.prob <- 1 - pchisq(modelChi, chidf)
+chisq.prob
+
+```
+
+chisq.prob = 0.0016, so the p value is about .002. Because this probability is less than .05, we can reject the null hypothesis that the model is not better than chance at predicting the outcome. This value is the likelihood ratio p-value of the model because we only had one predictor in the model. 
+
+We can report that including Intervention produced a significant improvement in the fit of the model, χ2(1) = 9.93, p = .002.
+
+## Predictor being Significant
+
+The crucial statistic is the **z-statistic** which has a normal distribution and tells us whether the b coefficient for that predictor is **significantly different from zero**. If the coefficient is significantly different from zero then we can assume that the predictor is making a significant contribution to the prediction of the outcome.
+
+In this model, the significance of the z-statistic is less than .05. Therefore, we could say he predictor "Intervention" was a significant predictor of being cured, b = 1.23, z = 3.07, p < .002.
+
+## R squared and Similar Estimates
+
+### R^2
+
+```{r}
+z_score <- 3.074
+df <- 1
+r <- sqrt((z_score^2 - 2*df) / eelModel_1$null.deviance)
+r
+```
+
+### Hosmer and Lemeshow's measure (R^2_L)
+
+```{r}
+R_hl <- modelChi / eelModel_1$null.deviance
+R_hl
+```
+
+### Cox and Snell's statistics
+```{r}
+sample_size <- 113
+R_cs <- 1 - exp((eelModel_1$deviance - eelModel_1$null.deviance) / sample_size)
+R_cs
+```
+
+### Nagelkerke's
+```{r}
+R_n <- R_cs / (1 - (exp(-(eelModel_1$null.deviance / sample_size))))
+R_n
+```
+
+## Odds Ratio
+
+```{r}
+exp(eelModel_1$coefficients)
+```
+We can interpret the odds ratio in terms of the change in odds. 
+
+- If the value is greater than 1 then it indicates that as the predictor increases, the odds of the outcome occurring increase. 
+- Conversely, a value less than 1 indicates that as the predictor increases, the odds of the outcome occurring decrease. 
+
+In this example, we can say that the odds of a patient who is treated being cured are 3.42 times higher than those of a patient
+who is not treated.
+
+## Confidence intervals for the odds ratio
+
+```{r}
+exp(confint(eelModel_1))
+```
+
+if we calculated confidence intervals for the value of the odds ratio in 100 different samples, then these intervals would encompass the actual value of the odds ratio in the population (rather than the sample) in 95 of those samples.
+
+In this case, we can be fairly confident that the population value of the odds ratio lies between
+1.58 and 7.63.
+
+**The important thing about this confidence interval is that it doesn’t cross 1 (the values at each end of the interval are greater than 1).**
+
+The fact that both the lower and upper limits of our confidence interval are above 1 gives us confidence that the direction of the relationship that we have observed is true in the population (i.e., it’s likely that having an intervention compared to not increases the odds of being cured). If the lower limit had been below 1 then it would tell us that there is a chance that in the population the direction of the relationship is the opposite to what we have observed. This would mean that we could not trust that our intervention increases the odds of being cured.
+
+
+
+# Model 2: two predictors
+
+```{r}
+eelModel_2 <- glm(Cured ~ Intervention + Duration, data = eelData, family = binomial())
+summary(eelModel_2)
+```
+
+
+
+
+
+
+# Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
